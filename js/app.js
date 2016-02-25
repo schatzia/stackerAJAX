@@ -31,6 +31,24 @@ var showQuestion = function(question) {
 	return result;
 };
 
+var showAnswerer = function(answerer){
+	var result = $('.templates .answerer').clone();
+	console.log(answerer);
+
+	var answererImg = result.find('.answerer-image img');
+	answererImg.attr('src', answerer.user.profile_image);
+
+	var answererElem = result.find('.answerer-name a');
+	answererElem.attr('href', answerer.user.link);
+	answererElem.text(answerer.user.display_name);
+
+	var reputation = result.find('.reputation');
+	reputation.text(answerer.user.reputation);
+
+	return result;
+
+};
+
 
 // this function takes the results object from StackOverflow
 // and returns the number of results and tags to be appended to DOM
@@ -81,6 +99,35 @@ var getUnanswered = function(tags) {
 	});
 };
 
+var getTopAnswerers = function(answerers){
+	var request = {
+		tagged: answerers,
+		site: 'stackoverflow',
+		order: 'desc',
+		sort: 'reputation'
+	};
+	$.ajax({
+		url: "http://api.stackexchange.com/2.2/tags/{tags}/top-answerers/all_time",
+		data: request,
+		dataType: "jsonp",//use jsonp to avoid cross origin issues
+		type: "GET",
+	})
+	.done(function(result){
+		var searchResults = showSearchResults(request.tagged, result.items.length);
+
+		$('.search-results').html(searchResults);
+
+		$.each(result.items, function(i, item){
+			var answerer = showAnswerer(item);
+			$('.results').append(answerer);
+		});
+	})
+	.fail(function(jqXHR, error){ //this waits for the ajax to return with an error promise object
+		var errorElem = showError(error);
+		$('.search-results').append(errorElem);
+	});
+
+};
 
 $(document).ready( function() {
 	$('.unanswered-getter').submit( function(e){
@@ -90,5 +137,11 @@ $(document).ready( function() {
 		// get the value of the tags the user submitted
 		var tags = $(this).find("input[name='tags']").val();
 		getUnanswered(tags);
+	});
+	$('.inspiration-getter').submit(function(e){
+		e.preventDefault();
+		$('.results').html('');
+		var answerers = $(this).find("input[name='answerers']").val();
+		getTopAnswerers(answerers);
 	});
 });
